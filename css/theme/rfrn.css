@@ -62,7 +62,7 @@ body {
  * LINKS
  *********************************************/
 .reveal a:not(.image) {
-  color: black;
+  color: #0087ff;
   text-decoration: none;
   -webkit-transition: color 0.15s ease;
   -moz-transition: color 0.15s ease;
@@ -77,7 +77,7 @@ body {
 
 .reveal .roll span:after {
   color: #fff;
-  background: black; }
+  background: #005eb3; }
 
 /*********************************************
  * IMAGES
@@ -95,7 +95,7 @@ body {
 
 .reveal a:hover img {
   background: rgba(255, 255, 255, 0.2);
-  border-color: black;
+  border-color: #0087ff;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.55); }
 
 /*********************************************
@@ -103,19 +103,19 @@ body {
  *********************************************/
 .reveal .controls div.navigate-left,
 .reveal .controls div.navigate-left.enabled {
-  border-right-color: black; }
+  border-right-color: #0087ff; }
 
 .reveal .controls div.navigate-right,
 .reveal .controls div.navigate-right.enabled {
-  border-left-color: black; }
+  border-left-color: #0087ff; }
 
 .reveal .controls div.navigate-up,
 .reveal .controls div.navigate-up.enabled {
-  border-bottom-color: black; }
+  border-bottom-color: #0087ff; }
 
 .reveal .controls div.navigate-down,
 .reveal .controls div.navigate-down.enabled {
-  border-top-color: black; }
+  border-top-color: #0087ff; }
 
 .reveal .controls div.navigate-left.enabled:hover {
   border-right-color: #0087ff; }
@@ -136,17 +136,15 @@ body {
   background: rgba(0, 0, 0, 0.2); }
 
 .reveal .progress span {
-  background: black;
+  background: #0087ff;
   -webkit-transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985);
   -moz-transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985);
   -ms-transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985);
   -o-transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985);
   transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985); }
 
-.reveal a:not(.image):hover {
-  -moz-transition: color 0.3s;
-  -webkit-transition: color 0.3s;
-  -o-transition: color 0.3s; }
+.reveal a:not(.image) {
+  font-style: italic; }
 
 #title-info {
   font-family: "Crimson";
