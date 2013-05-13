@@ -1,0 +1,73 @@
+/**
+ * RFRN theme for reveal.js
+ */
+
+
+// Default mixins and settings -----------------
+@import "../template/mixins";
+@import "../template/settings";
+// ---------------------------------------------
+
+
+
+// Include theme-specific fonts
+@font-face {
+    font-family: 'Crimson';
+    src: url('../../lib/font/crimson-roman.eot');
+    src: url('../../lib/font/crimson-roman.eot?#iefix') format('embedded-opentype'),
+         url('../../lib/font/crimson-roman.woff') format('woff'),
+         url('../../lib/font/crimson-roman.ttf') format('truetype'),
+         url('../../lib/font/crimson-roman.svg#CrimsonRoman') format('svg');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Crimson';
+    src: url('../../lib/font/crimson-italic.eot');
+    src: url('../../lib/font/crimson-italic.eot?#iefix') format('embedded-opentype'),
+         url('../../lib/font/crimson-italic.woff') format('woff'),
+         url('../../lib/font/crimson-italic.ttf') format('truetype'),
+         url('../../lib/font/crimson-italic.svg#CrimsonItalic') format('svg');
+    font-weight: normal;
+    font-style: italic;
+}
+
+@import url(https://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic);
+@import url(https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300,700);
+
+// Override theme settings (see ../template/settings.scss)
+$mainColor: #333;
+$mainFont: 'Crimson';
+$headingFont: 'Lato';
+$headingColor: #333;
+$headingTextTransform: none;
+$headingTextShadow: none;
+$heading1TextShadow: none;
+$backgroundColor: #ece8e8;
+$linkColor: black;
+$linkColorHover: #0087ff;
+$selectionBackgroundColor: rgba(79, 64, 28, 0.99);
+$heading1TextShadow: none;
+
+// Theme template ------------------------------
+@import "../template/theme";
+// ---------------------------------------------
+
+.reveal a:not(.image):hover {
+    -moz-transition: color 0.3s;
+    -webkit-transition: color 0.3s;
+    -o-transition: color 0.3s;
+}
+
+#title-info {
+    font-family: "Crimson";
+    position: relative;
+    font-size: 42px;
+    left: 15px;
+    top: 50px;
+}
+
+#title-info span + span {
+    margin-left: 80px;
+}

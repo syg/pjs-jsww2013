@@ -41,6 +41,8 @@ body {
 	letter-spacing: $headingLetterSpacing;
 
 	text-transform: $headingTextTransform;
+        font-variant: $headingTextVariant;
+        font-weight: bold;
 	text-shadow: $headingTextShadow;
 }
 
