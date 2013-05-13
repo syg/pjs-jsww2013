@@ -38,36 +38,425 @@
 
 	<section data-state="darktitle">
 	  <h1>PJS</h1>
-	  <h3>So Misunderstood</h3>
+	  <h3>A Misunderstood Implementation</h3>
 	  <div id="title-info">
-            <span>Shu-yu Guo / <a href="mailto:shu@mozilla.com">shu@mozilla.com</a></span>
+            <span>Shu-yu Guo / <a href="mailto:shu@mozilla.com">shu</a></span>
             <br>
             <span style="font-size: 80%;">JS Work Week Santa Cruz 2013</span>
 	  </div>
 	</section>
 
         <section>
-          <h2>Slide</h2>
-          <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-          <ul>
-            <li>Item 1</li>
-            <li>Item 2</li>
+          <h2>Data Parallelism for JS</h2>
+          <p>Yes, it's a collaboration with Intel...</p>
+          <p class="fragment"><i>But</i>, it is standards track, and we have the final word.</p>
+        </section>
+
+        <section>
+          <h2>API</h2>
+          <p>Provide functional, higher-order operations on arrays and binary data.</p>
+<div class="highlight"><pre><span class="kd">var</span> <span class="nx">a</span> <span class="o">=</span> <span class="p">[];</span>
+<span class="p">...</span> <span class="c1">// initialize a</span>
+<span class="kd">var</span> <span class="nx">a2</span> <span class="o">=</span> <span class="nx">a</span><span class="p">.</span><span class="nx">pmap</span><span class="p">(</span><span class="nx">kernel</span><span class="p">);</span>
+</pre></div>
+        </section>
+
+        <section>
+          <aside class="notes">
+            So what kind of kernel functions can be run in parallel? Roughly, ones without observable side effects. When this happens, the entire operation falls back to sequential execution. Internally, we bail out before executing the side effect, then restart the entire computation.
+          </aside>
+
+          <h2>What Runs in Parallel?</h2>
+<div class="highlight"><pre><span class="kd">var</span> <span class="nx">upvar</span><span class="p">;</span>
+<span class="nx">a</span><span class="p">.</span><span class="nx">pmap</span><span class="p">(</span><span class="kd">function</span> <span class="p">(</span><span class="nx">x</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">upvar</span> <span class="o">=</span> <span class="nx">x</span><span class="p">;</span> <span class="c1">// observable side effect! entire op runs sequentially</span>
+<span class="p">});</span>
+</pre></div>
+        </section>
+
+
+        <section>
+          <aside class="notes">
+            For an engine as venerable as SM, making the interpreter threadsafe was a nonstarter.
+          </aside>
+
+          <h2>How to parallelize JS?</h2>
+          <p>Making interpreter threadsafe a nonstarter.</p>
+          <p class="fragment">Use the JIT!</p>
+          <ul class="fragment">
+            <li>Many fast paths already threadsafe</li>
+            <li>Mark which instructions are safe/unsafe at compile time</li>
+            <li>Analysis framework already exists</li>
           </ul>
         </section>
 
         <section>
-          <h2>Code</h2>
-<pre><code><span class="c1">// Check if we have already stubbed the current object to avoid</span>
-<span class="c1">// attaching a duplicate stub.</span>
-<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">cache</span><span class="p">.</span><span class="n">initStubbedShapes</span><span class="p">(</span><span class="n">cx</span><span class="p">))</span>
-    <span class="k">return</span> <span class="n">TP_FATAL</span><span class="p">;</span>
-<span class="n">ShapeSet</span><span class="o">::</span><span class="n">AddPtr</span> <span class="n">p</span> <span class="o">=</span> <span class="n">cache</span><span class="p">.</span><span class="n">stubbedShapes</span><span class="p">()</span><span class="o">-&gt;</span>
-    <span class="n">lookupForAdd</span><span class="p">(</span><span class="n">obj</span><span class="o">-&gt;</span><span class="n">lastProperty</span><span class="p">());</span>
-<span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">TP_SUCCESS</span><span class="p">;</span>
-<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">cache</span><span class="p">.</span><span class="n">stubbedShapes</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">add</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">obj</span><span class="o">-&gt;</span><span class="n">lastProperty</span><span class="p">()))</span>
-    <span class="k">return</span> <span class="n">TP_FATAL</span><span class="p">;</span>
-</code></pre>
+          <aside class="notes">
+            So how does this all work? The majority of this talk will be to give technical overviews of the various parts of the infrastructure for PJS. We'll go from the outside in: self-hosted JS first, then the engine internals.
+          </aside>
+
+          <h2>Under the Hood</h2>
+          <ul>
+            <li>Self-hosting</li>
+            <ul>
+              <li><code>ForkJoin</code></li>
+              <li>Warmups</li>
+            </ul>
+          </ul>
+          <ul class="fragment">
+            <li>Parallel execution mode</li>
+            <ul>
+              <li>Transitive compilation</li>
+              <li>Ensuring purity</li>
+            </ul>
+          </ul>
+          <ul class="fragment">
+            <li>Challenges</li>
+            <ul>
+              <li>Recompiles</li>
+              <li>Context sensitivity</li>
+            </ul>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Self-hosting</h2>
+          <p>Leverage the engine; improvements made for PJS feed back into the engine.</p>
+          <p>Makes nesting calls to parallel operations easier.</p>
+          <p>Allows for rapid iteration.</p>
+          <p>Implementation at <code>builtin/ParallelArray.{h,cpp,js}</code></p>
+        </section>
+
+        <section>
+          <aside class="notes">
+            Some implementation details, like error checking and scheduling the index bounds between slices, are elided.
+          </aside>
+
+          <h2>Parallel Map</h2>
+<div class="highlight"><pre><span class="kd">function</span> <span class="nx">ArrayParallelMap</span><span class="p">(</span><span class="nx">func</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">buffer</span> <span class="o">=</span> <span class="nx">NewDenseArray</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">numSlices</span> <span class="o">=</span> <span class="nx">ForkJoinSlices</span><span class="p">();</span>
+  <span class="nx">ForkJoin</span><span class="p">(</span><span class="nx">mapSlice</span><span class="p">,</span> <span class="nx">CheckParallel</span><span class="p">(</span><span class="nx">mode</span><span class="p">));</span>
+  <span class="k">return</span> <span class="nx">buffer</span><span class="p">;</span>
+
+  <span class="kd">function</span> <span class="nx">mapSlice</span><span class="p">(</span><span class="nx">sliceId</span><span class="p">,</span> <span class="nx">numSlices</span><span class="p">,</span> <span class="nx">warmup</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="p">[</span><span class="nx">indexStart</span><span class="p">,</span> <span class="nx">indexEnd</span><span class="p">]</span> <span class="o">=</span> <span class="nx">ComputeIndexBounds</span><span class="p">(</span><span class="nx">sliceId</span><span class="p">,</span> <span class="nx">warmup</span><span class="p">);</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="nx">indexStart</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">indexEnd</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span>
+      <span class="nx">UnsafeSetElement</span><span class="p">(</span><span class="nx">buffer</span><span class="p">,</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">func</span><span class="p">(</span><span class="nx">self</span><span class="p">[</span><span class="nx">i</span><span class="p">],</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">self</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+        </section>
+
+        <section>
+          <h2>Intrinsics</h2>
+          <p>Vanilla JS obviously does not suffice. Unsafe intrinsics to the rescue!</p>
+          <ul>
+            <li><code>ForkJoin</code></li>
+            <li class="fragment"><code>ForkJoinSlices</code></li>
+            <li class="fragment"><code>NewDenseArray</code></li>
+            <li class="fragment"><code>UnsafeSetElement</code></li>
+          </ul>
+          <p class="fragment">Inlinings of frequently used ones, like <code>UnsafeSetElement</code>, exist in Ion.</p>
+        </section>
+
+        <section>
+          <h2>ForkJoin</h2>
+          <p>Signature:</p>
+          <code>(func : function, feedback : maybe function) -> void</code><br><br>
+          <p>Kernel signature:</p>
+          <code>(sliceId : int, numSlices : int, warmup : bool) -> void</code><br><br>
+          <p>The kernel function is supposed to track the work it needs to do on its own given its arguments.</p>
+        </section>
+
+        <section>
+          <h2>ForkJoin</h2>
+          <p>Compiles function's callgraph in Ion for <i>parallel mode</i>.</p>
+          <p>Spawns N (defaults to number of cores - 1) threads in fork-join style.</p>
+          <p>Threads do not have access to <code>JSContext</code>. Context is a <code>ForkJoinSlice</code>, stored in TLS.</p>
+          <p>Parallel allocation: each thread has own allocator; arenas moved back to the main allocator after joining.</p>
+          <p>Stop-the-world GC.</p>
+          <p>Implementation at <code>vm/ForkJoin.{h,cpp}</code></p>
+        </section>
+
+        <section>
+          <h2>Warmups</h2>
+          <p>What is that <code>warmup</code> flag?</p>
+          <div class="fragment">
+            <p>No TI info = can't JIT. No JIT code = no parallel execution.</p>
+            <p>If kernel function isn't compiled, run sequentially and warmup.</p>
+            <p>If compiled function bails out, re-warmup.</p>
+            <p>Turn off parallel execution if bailouts too frequent.</p>
+          </div>
+        </section>
+
+        <section>
+          <h2>Parallel Execution Mode</h2>
+          <p>Calling <code>ForkJoin(f)</code> warms up <code>f</code> and compiles it for parallel mode.</p>
+          <p class="fragment">Different <code>IonScript</code> named <code>parallelIon</code>.</p>
+          <p class="fragment">Analyzed for safety before compiled.</p>
+          <p class="fragment">Cannot call into other modes.</p>
+          <p class="fragment">Bails out back to <code>ForkJoin</code> call, not point of bailout in interpreter/baseline.</p>
+        </section>
+
+        <section>
+          <h2>Default Mode</h2>
+          <p>Sequential execution is default in all phases of Ion compilation.</p>
+        </section>
+
+        <section>
+          <aside class="notes">
+            Because we can't call into other modes or fallback without bailing out the entire fork-join computation, we have to compile the entire callgraph beforehand.
+          </aside>
+
+          <h2>Transitive Compilation</h2>
+          <h4>Problem</h4>
+          <p>Cannot compile a script without aborting of fork-join; calls to uncompiled scripts abort.</p>
+          <div class="fragment">
+            <h4>Solution</h4>
+            <p>Need to compile the kernel and all reachable callees before spinning up threads.</p>
+            <p>Use TI info (singleton types and <code>TypeObject::interpretedFunction</code>) to determine callgraph.</p>
+            <p>Fixed-point algorithm. Script invalidations can happen inside transitive compilation due to type propagation.</p>
+          </div>
+        </section>
+
+        <section>
+          <aside class="notes">
+            As mentioned before, we don't allow side-effectful functions to be run in parallel. Crashes and races are bad. So how do we prevent this?
+          </aside>
+
+          <h2>Ensuring Purity</h2>
+          <p>Analysis phase to mark MIR as <i>safe</i> (checks, if any, are runtime) or <i>unsafe</i>. See <code>ion/ParallelArrayAnalysis.cpp</code></p>
+
+          <div class="fragment">
+            <p>In general, MIR are categorized as:</p>
+            <ul>
+              <li>Always safe (<code>Goto</code>, <code>TypeBarrier</code>, etc)</li>
+              <li>Always unsafe (<code>ToString</code>, <code>CallSetElement</code>, etc)</li>
+              <li>Write-guarded (<code>StoreFixedSlot</code>, etc)</li>
+              <li>Specialized (arithmetic ops)</li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <h2>Safe MIR</h2>
+          <p>These MIR either:</p>
+          <ul>
+            <li>&hellip;are pure (e.g. <code>Goto</code>, <code>Box</code>)</li>
+            <li>&hellip;have runtime checks (e.g. <code>TypeBarrier</code>)</li>
+            <li>&hellip;have alternate codegen with checks (e.g. <code>Call</code>, <code>NewObject</code>)</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Unsafe MIR</h2>
+          <p>Basic blocks with unsafe MIR are replaced with bailouts.</p>
+          <p>Scripts with unsafe entry blocks are disabled.</p>
+          <p class="fragment">Some currently-marked unsafe MIR might be overly conservative. We simply haven't had the time to look at / support them.</p>
+        </section>
+
+        <section>
+          <h2>Write-guarded MIR</h2>
+          <p>Recall each thread has its own allocator.</p>
+          <p>Some MIR (e.g. <code>StoreFixedSlot</code>) safe as long as we guard on writing only to thread-local objects.</p>
+        </section>
+
+        <section>
+          <h2>Specialized</h2>
+          <p>Some operations (e.g. <code>Add</code>) are safe so long as we know they won't call out into side-effectful hooks.</p>
+        </section>
+
+        <section>
+          <h2>Aside: MPar*</h2>
+          <p>Currently, there are alternate versions of MIR for parallel mode, such as <code>MParNew</code>. These all take an <code>MForkJoinSlice</code> as an extra operand.</p>
+          <p>Going forward, we'll be consolidating some of those (bug 869313).</p>
+        </section>
+
+        <section>
+          <h2>Self-modifying Code</h2>
+          <div>
+            <h4>Problem</h4>
+            <p>PICs are not threadsafe, as they call into the VM and modify code.</p>
+          </div>
+          <div class="fragment">
+            <h4>Solution</h4>
+            <p>Pure paths in the VM + atomic attaching of generated stubs.</p>
+          </div>
+        </section>
+
+        <section>
+          <h2>GetProperty: VM Path</h2>
+          <p>Getting a property is language-level pure, but VM-level impure!</p>
+          <div class="fragment">
+            <h4>Problem</h4>
+            <p>Shape table may hashify.</p>
+          </div>
+          <div class="fragment">
+            <h4>Solution</h4>
+            <p>Carve out pure, contextless paths to do property get and lookup that never hashifies. May be independently useful. See <code>GetPropertyPure</code>.</p>
+          </div>
+        </section>
+
+        <section>
+          <h2>Atomic Stub Attaching</h2>
+          <div class="fragment">
+            <h4>Problem</h4>
+            <p>Patching the last jump of an IC daisy chain is not atomic; also have to worry about alignment, ARM caches, etc.</p>
+          </div>
+          <div class="fragment">
+            <h4>Solution</h4>
+            <p>Lock the VM when attaching a new stub.</p>
+            <p>Introduce a &ldquo;stub attaching policy&rdquo; class: <code>IonCache::StubAttacher</code>.</p>
+            <p>Separate 2 base classes, <code>RepatchIonCache</code> and <code>DispatchIonCache</code>.</p>
+          </div>
+        </section>
+
+        <section>
+          <aside class="notes">
+            lastJump_ is the last jump in the stub daisy chain. In the beginning it points to the update cache function.
+          </aside>
+
+          <h2>Repatch - Initial State</h2>
+<pre>
+         JIT Code
+        +--------+   .---------------.
+        |        |   |               |
+        |========|   v +----------+  |
+        |== IC ==|====>| Cache Fn |  |
+        |========|     +----------+  |
+        |        |<=#       #        |
+        |        |  #=======#        |
+        +--------+  Rejoin path      |
+            |________                |
+                    |                |
+          Repatch   |                |
+            IC      |                |
+          Entry     |                |
+        +------------+               |
+        | lastJump_  |---------------/
+        +------------+
+        |    ...     |
+        +------------+
+</pre>
+        </section>
+
+        <section>
+          <aside class="notes">
+            Attaching a stub patches the previous lastJump_ and updates lastJump_ to point to the new, last jump. Stubs are always appended.
+          </aside>
+
+          <h2>Repatch - Stub</h2>
+<pre>
+         JIT Code
+        +--------+ #=======================#
+        |        | #                       v
+        |========| #   +----------+     +------+
+        |== IC ==|=#   | Cache Fn |<====| Stub |
+        |========|     +----------+  ^  +------+
+        |        |<=#      #         |     #
+        |        |  #======#=========|=====#
+        +--------+      Rejoin path  |
+            |________                |
+                    |                |
+          Repatch   |                |
+            IC      |                |
+          Entry     |                |
+        +------------+               |
+        | lastJump_  |---------------/
+        +------------+
+        |    ...     |
+        +------------+
+</pre>
+        </section>
+
+        <section>
+          <aside class="notes">
+            No already-running code is patched. The IC entry keeps a firstStub_ pointer which points to the first stub to jump to. The jump is first loaded from the IC entry, then jumped to. Stubs are prepended.
+          </aside>
+
+          <h2>Dispatch - Initial State</h2>
+<pre>
+         JIT Code
+        +--------+                                 .-------.
+        |        |                                 v       |
+        |========|     +---------------+     +----------+  |
+        |== IC ==|====>| Load and jump |====>| Cache Fn |  |
+        |========|     +---------------+     +----------+  |
+        |        |<=#           *                #         |
+        |        |  #===========*================#         |
+        +--------+       Rejoin * path                     |
+            |________           *                          |
+                    |           *                          |
+          Dispatch  |           *                          |
+            IC    **|************                          |
+          Entry   * |                                      |
+        +------------+                                     |
+        | firstStub_ |-------------------------------------/
+        +------------+
+        |    ...     |
+        +------------+
+</pre>
+        </section>
+
+        <section>
+          <aside class="notes">
+            Assign the address of the new stub to firstStub_. The new stub jumps to the previous address held by firstStub_ on failure. No already-running instruction stream is patched at the expense of an extra load.
+          </aside>
+
+          <h2>Dispatch - Stub</h2>
+<pre>
+         JIT Code
+        +--------+                        #=====================#   .-----.
+        |        |                        #                     v   v     |
+        |========|     +---------------+  #  +----------+     +------+    |
+        |== IC ==|====>| Load and jump |==#  | Cache Fn |<====| Stub |    |
+        |========|     +---------------+     +----------+     +------+    |
+        |        |<=#           *                #                #       |
+        |        |  #===========*================#================#       |
+        +--------+       Rejoin * path                                    |
+            |________           *                                         |
+                    |           *                                         |
+          Dispatch  |           *                                         |
+            IC    **|************                                         |
+          Entry   * |                                                     |
+        +------------+                                                    |
+        | firstStub_ |----------------------------------------------------/
+        +------------+
+        |    ...     |
+        +------------+
+</pre>
+        </section>
+
+        <section>
+          <h2>Big VM Lock</h2>
+          <p>It is unfortunate that we have to lock the entire VM when attaching a new stub (the code allocator depends on the <code>JSContext</code>). In the future, finer-grained locks would be preferred.
+        </section>
+
+        <section>
+          <h2>Recompiles</h2>
+          <p>TODO: recompile scheme, calltargets, hurts us a lot, OMTC</p>
+        </section>
+
+        <section>
+          <h2>Context Sensitivity</h2>
+          <p>TODO: callsite cloning, refinement</p>
+        </section>
+
+        <section>
+          <h2>Thank you!</h2>
+          <div style="display: inline-block;">
+            <img src="nmatsakis.jpeg" style="height: 220px;"><br>
+            <span style="font-size: 80%;">Niko Matsakis / <a href="mailto:nmatsakis@mozilla.com">nmatsakis</a></span>
+          </div>
+          <div style="display: inline-block;">
+            <img src="pnkfelix.png" style="height: 220px;"><br>
+            <span style="font-size: 80%;">Felix Klock II / <a href="pnkfelix@mozilla.com">pnkfelix</a></span>
+          </div>
+          <div style="display: inline-block;">
+            <img src="shu.jpg" style="height: 220px;"><br>
+            <span style="font-size: 80%;">Shu-yu Guo / <a href="shu@mozilla.com">shu</a></span>
+          </div>
         </section>
 
       </div>
@@ -82,7 +471,7 @@
       // Full list of configuration options available here:
       // https://github.com/hakimel/reveal.js#configuration
       Reveal.initialize({
-      controls: false,
+      controls: true,
       progress: false,
       history: true,
       center: true,

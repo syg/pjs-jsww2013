@@ -227,6 +227,11 @@ body {
 	margin: 0 0 0 1em;
 }
 
+.reveal p {
+        text-align: left;
+	margin: 0 0 0 1em;
+}
+
 .reveal ol {
 	list-style-type: decimal;
 }
@@ -292,8 +297,10 @@ body {
 	line-height: 1.3em;
 
 	word-wrap: break-word;
+	font-family: 'PragmataPro', monospace;
 }
 .reveal code {
+        font-size: 0.8em;
 	font-family: 'PragmataPro', monospace;
 }
 .reveal pre code {

@@ -146,6 +146,18 @@ body {
 .reveal a:not(.image) {
   font-style: italic; }
 
+.darktitle .reveal .state-background {
+  background: #333; }
+
+.darktitle .reveal {
+  color: #ece8e8; }
+
+.darktitle .reveal h3 {
+  color: #ece8e8; }
+
+.darktitle .reveal h1 {
+  color: #ece8e8; }
+
 #title-info {
   font-family: "Crimson";
   position: relative;
