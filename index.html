@@ -435,12 +435,103 @@
 
         <section>
           <h2>Recompiles</h2>
-          <p>TODO: recompile scheme, calltargets, hurts us a lot, OMTC</p>
+          <p>We must exit parallel execution to recompile invalidated scripts.</p>
+          <p>Recompiles not so bad for sequential execution, but hurts performance greatly in parallel execution.</p>
+          <p>Very noticeable jitters!</p>
+          <p class="fragment">Must be able to reach a fixed state w.r.t. recompiles quickly.</p>
+        </section>
+
+        <section>
+          <aside class="notes">
+            In the example, if we wait until g, then f, get invalidated, then recompile the entire callgraph, we'll do wasted work.
+          </aside>
+
+          <h2>Recompiles</h2>
+          <div>
+            <h4>Problem</h4>
+            <p>Suppose our callgraph is <code>f -&gt; g -&gt; h</code>.
+              If <code>h</code> gets invalidated, when do we recompile it?</p>
+          </div>
+          <div class="fragment">
+            <h4>Solution</h4>
+            <p>We store the possible targets that a function may call and a dirty bit in <code>parallelIon</code>.</p>
+            <p>Upon invalidation, flip the dirty bit all the way up the call chain to check for compiledness of its possible targets upon next call to <code>ForkJoin</code>.</p>
+          </div>
+        </section>
+
+        <section>
+          <h2>Recompile Jitters</h2>
+          <p>Use off-main-thread-compilation to help with jitters in parallel mode, much like in sequential mode.</p>
         </section>
 
         <section>
           <h2>Context Sensitivity</h2>
-          <p>TODO: callsite cloning, refinement</p>
+          <p>Context sensitivity in type info is important for writing parametric polymorphic code (like collections) in JS.</p>
+          <p>Doubly so for PJS, where recompiles hurt more, and a greater desire to stable type state quicker.</p>
+        </section>
+
+        <section>
+          <aside class="notes">
+            Sites where type info will be conflated across different calls are highlighted.
+          </aside>
+
+          <h2>Parallel Map</h2>
+<div class="highlight"><pre><span class="kd">function</span> <span class="nx">ArrayParallelMap</span><span class="p">(</span><span class="nx" style="background-color: yellow;">func</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx" style="background-color: yellow;">buffer</span> <span class="o">=</span> <span class="nx">NewDenseArray</span><span class="p">(</span><span class="k" style="background-color: yellow;">this</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">numSlices</span> <span class="o">=</span> <span class="nx">ForkJoinSlices</span><span class="p">();</span>
+  <span class="nx">ForkJoin</span><span class="p">(</span><span class="nx">mapSlice</span><span class="p">,</span> <span class="nx">CheckParallel</span><span class="p">(</span><span class="nx">mode</span><span class="p">));</span>
+  <span class="k">return</span> <span class="nx" style="background-color: yellow;">buffer</span><span class="p">;</span>
+
+  <span class="kd">function</span> <span class="nx">mapSlice</span><span class="p">(</span><span class="nx">sliceId</span><span class="p">,</span> <span class="nx">numSlices</span><span class="p">,</span> <span class="nx">warmup</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">var</span> <span class="p">[</span><span class="nx">indexStart</span><span class="p">,</span> <span class="nx">indexEnd</span><span class="p">]</span> <span class="o">=</span> <span class="nx">ComputeIndexBounds</span><span class="p">(</span><span class="nx">sliceId</span><span class="p">,</span> <span class="nx">warmup</span><span class="p">);</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">var</span> <span class="nx">i</span> <span class="o">=</span> <span class="nx">indexStart</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">indexEnd</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span>
+      <span class="nx">UnsafeSetElement</span><span class="p">(</span><span class="nx" style="background-color: yellow;">buffer</span><span class="p">,</span> <span class="nx">i</span><span class="p">,</span> <span class="nx" style="background-color: yellow;">func</span><span class="p">(</span><span  style="background-color: yellow;"><span class="nx">self</span><span class="p">[</span><span class="nx">i</span><span class="p">]</span></span>, <span class="nx">i</span><span class="p">,</span> <span class="nx" style="background-color: yellow;">self</span><span class="p">));</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+        </section>
+
+        <section>
+          <h2>Callsite Cloning</h2>
+          <h4>Problem</h4>
+          <p>Some mechanism of monomorphizing functions around arguments and <code>this</code>.</p>
+          <div class="fragment">
+            <h4>Solution</h4>
+            <p>Clone marked, self-hosted functions at callsites.</p>
+          </div>
+        </section>
+
+        <section>
+          <h2>Callsite Cloning</h2>
+          <p>For an operation like <code>map</code>, we want to monomorphize on its kernel function argument and <code>this</code>. Callsite cloning is a decently close approximation.</p>
+          <p class="fragment">The ability to specialize refine types at inline sites does not subsume all callsite cloning use case.</p>
+        </section>
+
+        <section>
+          <h2>Callsite Cloning</h2>
+          <p>Functions marked explicitly with</p>
+          <code>SetScriptHints(f, { cloneAtCallsite: true })</code>
+          <div class="fragment">
+            <p>Cloned via deep script cloning.
+              <ul style="padding-left: 1em;">
+                <li>Has a backlink to original function for things like <code>function.caller</code></li>
+                <li>Argument, <code>this</code>, and return typesets flow back to original</li>
+              </ul>
+            </p>
+          </div>
+          <p class="fragment">Each unique callsite (script and PC pair) of <code>f</code> has a clone of <code>f</code>. Hash table of callsite to clone kept in <code>cx-&gt;compartment-&gt;callsiteClones</code>.
+          <p class="fragment">Always cloned in the interpreter. Cloned with best effort in the JITs.</p>
+        </section>
+
+        <section>
+          <h2>Summary</h2>
+          <p>PJS is self-hosted with <code>ForkJoin</code>.</p>
+          <p>Only pure, Ion-compiled code runs in parallel.</p>
+          <p>Extra efforts taken to cut down on recompiles and type instability.</p>
+        </section>
+
+        <section>
+          <h3>Nothing too shady!</h3>
         </section>
 
         <section>
