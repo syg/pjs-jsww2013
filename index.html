@@ -134,6 +134,7 @@
 
           <h2>Parallel Map</h2>
 <div class="highlight"><pre><span class="kd">function</span> <span class="nx">ArrayParallelMap</span><span class="p">(</span><span class="nx">func</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">;</span>
   <span class="kd">var</span> <span class="nx">buffer</span> <span class="o">=</span> <span class="nx">NewDenseArray</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
   <span class="kd">var</span> <span class="nx">numSlices</span> <span class="o">=</span> <span class="nx">ForkJoinSlices</span><span class="p">();</span>
   <span class="nx">ForkJoin</span><span class="p">(</span><span class="nx">mapSlice</span><span class="p">,</span> <span class="nx">CheckParallel</span><span class="p">(</span><span class="nx">mode</span><span class="p">));</span>
@@ -467,7 +468,7 @@
         <section>
           <h2>Context Sensitivity</h2>
           <p>Context sensitivity in type info is important for writing parametric polymorphic code (like collections) in JS.</p>
-          <p>Doubly so for PJS, where recompiles hurt more, and a greater desire to stable type state quicker.</p>
+          <p>Doubly so for PJS, where recompiles hurt more, and a greater desire to stablize type state quicker.</p>
         </section>
 
         <section>
@@ -477,6 +478,7 @@
 
           <h2>Parallel Map</h2>
 <div class="highlight"><pre><span class="kd">function</span> <span class="nx">ArrayParallelMap</span><span class="p">(</span><span class="nx" style="background-color: yellow;">func</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">var</span> <span class="nx" style="background-color: yellow;">self</span> <span class="o">=</span> <span class="k" style="background-color: yellow;">this</span><span class="p">;</span>
   <span class="kd">var</span> <span class="nx" style="background-color: yellow;">buffer</span> <span class="o">=</span> <span class="nx">NewDenseArray</span><span class="p">(</span><span class="k" style="background-color: yellow;">this</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
   <span class="kd">var</span> <span class="nx">numSlices</span> <span class="o">=</span> <span class="nx">ForkJoinSlices</span><span class="p">();</span>
   <span class="nx">ForkJoin</span><span class="p">(</span><span class="nx">mapSlice</span><span class="p">,</span> <span class="nx">CheckParallel</span><span class="p">(</span><span class="nx">mode</span><span class="p">));</span>
@@ -504,7 +506,7 @@
         <section>
           <h2>Callsite Cloning</h2>
           <p>For an operation like <code>map</code>, we want to monomorphize on its kernel function argument and <code>this</code>. Callsite cloning is a decently close approximation.</p>
-          <p class="fragment">The ability to specialize refine types at inline sites does not subsume all callsite cloning use case.</p>
+          <p class="fragment">The ability to refine types at inline sites does not subsume all callsite cloning use cases.</p>
         </section>
 
         <section>
